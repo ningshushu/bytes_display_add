@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>字节显示互动装置</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background-color: #2d2d2d;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #00ff9d;
+            text-shadow: 0 0 10px rgba(0, 255, 157, 0.5);
+        }
+        .byte-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+        .byte-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .bit-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .bit-label {
+            font-size: 12px;
+            color: #888;
+            font-weight: bold;
+        }
+        /* 开关样式 */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #444;
+            transition: .4s;
+            border-radius: 30px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #00ff9d;
+        }
+        input:checked + .slider:before {
+            transform: translateX(30px);
+        }
+        /* LED样式 */
+        .led {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #333;
+            border: 3px solid #555;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .led:before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            right: 5px;
+            bottom: 5px;
+            background-color: rgba(255, 0, 0, 0.2);
+            border-radius: 50%;
+        }
+        .led.active {
+            background-color: #ff3333;
+            box-shadow: 0 0 15px #ff3333, 0 0 30px rgba(255, 51, 51, 0.5);
+            border-color: #ff6666;
+        }
+        .led.active:before {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+        /* 数值显示 */
+        .value-display {
+            margin-top: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+        }
+        .value-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background-color: #3a3a3a;
+            border-radius: 8px;
+            font-size: 18px;
+        }
+        .value-label {
+            color: #00ff9d;
+            font-weight: bold;
+        }
+        .value {
+            font-family: 'Courier New', monospace;
+            font-size: 20px;
+            color: #ffffff;
+            background-color: #1a1a1a;
+            padding: 5px 10px;
+            border-radius: 4px;
+            min-width: 120px;
+            text-align: center;
+        }
+        /* 二进制显示 */
+        .binary-display {
+            font-family: 'Courier New', monospace;
+            font-size: 24px;
+            letter-spacing: 10px;
+            text-align: center;
+            padding: 15px;
+            background-color: #1a1a1a;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        /* 表格样式 */
+        .byte-table {
+            margin: 20px 0;
+            width: 100%;
+        }
+        .byte-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .byte-table td {
+            text-align: center;
+            padding: 10px 5px;
+        }
+        
+        /* 值表格样式 - 三行四列 */
+        .value-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: #1a1a1a;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .value-table th {
+            background-color: #00ff9d;
+            color: #1a1a1a;
+            font-weight: bold;
+            padding: 12px;
+            text-align: center;
+        }
+        .value-table td {
+            padding: 15px;
+            text-align: center;
+            border: 1px solid #3a3a3a;
+            vertical-align: middle;
+        }
+        .value-table small {
+            color: #888;
+            font-size: 12px;
+            margin-top: 5px;
+            display: block;
+        }
+        
+        /* 操作数标签 */
+        .operand-label {
+            font-weight: bold;
+            color: #00ff9d;
+            font-size: 16px;
+            background-color: #3a3a3a;
+        }
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .byte-row {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            .bit-container {
+                flex-basis: calc(20% - 10px);
+            }
+            .switch {
+                width: 40px;
+                height: 20px;
+            }
+            .slider:before {
+                height: 14px;
+                width: 14px;
+            }
+            input:checked + .slider:before {
+                transform: translateX(20px);
+            }
+            .led {
+                width: 30px;
+                height: 30px;
+            }
+            .binary-display {
+                font-size: 18px;
+                letter-spacing: 5px;
+            }
+        }
+        /* 动画效果 */
+            @keyframes pulse {
+                0% {
+                    box-shadow: 0 0 15px #ff3333, 0 0 30px rgba(255, 51, 51, 0.5);
+                }
+                50% {
+                    box-shadow: 0 0 25px #ff3333, 0 0 40px rgba(255, 51, 51, 0.7);
+                }
+                100% {
+                    box-shadow: 0 0 15px #ff3333, 0 0 30px rgba(255, 51, 51, 0.5);
+                }
+            }
+            .led.active.pulse {
+                animation: pulse 1s infinite;
+            }
+            
+            /* 清除按钮样式 */
+            #clear-button:hover {
+                background-color: #00e68c;
+                box-shadow: 0 6px 20px rgba(0, 255, 157, 0.5);
+                transform: translateY(-2px);
+            }
+            #clear-button:active {
+                transform: translateY(0);
+                box-shadow: 0 2px 10px rgba(0, 255, 157, 0.3);
+            }
+    </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>字节加法运算器</h1>
+            
+            <div class="byte-section">
+                <!-- 三行加法表格：第一行被加数、第二行加数、第三行和 -->
+                <div class="byte-table">
+                    <table>
+                        <!-- 第一行：被加数 -->
+                        <tr>
+                            <td colspan="8" class="operand-label">被加数</td>
+                        </tr>
+                        <tr>
+                            <td><div class="bit-container"><label class="switch"><input type="checkbox" class="augend-switch" data-bit="7"><span class="slider"></span></label></div></td>
+                            <td><div class="bit-container"><label class="switch"><input type="checkbox" class="augend-switch" data-bit="6"><span class="slider"></span></label></div></td>
+                            <td><div class="bit-container"><label class="switch"><input type="checkbox" class="augend-switch" data-bit="5"><span class="slider"></span></label></div></td>
+                            <td><div class="bit-container"><label class="switch"><input type="checkbox" class="augend-switch" data-bit="4"><span class="slider"></span></label></div></td>
+                            <td><div class="bit-container"><label class="switch"><input type="checkbox" class="augend-switch" data-bit="3"><span class="slider"></span></label></div></td>
+                            <td><div class="bit-container"><label class="switch"><input type="checkbox" class="augend-switch" data-bit="2"><span class="slider"></span></label></div></td>
+                            <td><div class="bit-container"><label class="switch"><input type="checkbox" class="augend-switch" data-bit="1"><span class="slider"></span></label></div></td>
+                            <td><div class="bit-container"><label class="switch"><input type="checkbox" class="augend-switch" data-bit="0"><span class="slider"></span></label></div></td>
+                        </tr>
+                        
+                        <!-- 第二行：加数 -->
+                        <tr>
+                            <td colspan="8" class="operand-label">加数</td>
+                        </tr>
+                        <tr>
+                            <td><div class="bit-container"><label class="switch"><input type="checkbox" class="addend-switch" data-bit="7"><span class="slider"></span></label></div></td>
+                            <td><div class="bit-container"><label class="switch"><input type="checkbox" class="addend-switch" data-bit="6"><span class="slider"></span></label></div></td>
+                            <td><div class="bit-container"><label class="switch"><input type="checkbox" class="addend-switch" data-bit="5"><span class="slider"></span></label></div></td>
+                            <td><div class="bit-container"><label class="switch"><input type="checkbox" class="addend-switch" data-bit="4"><span class="slider"></span></label></div></td>
+                            <td><div class="bit-container"><label class="switch"><input type="checkbox" class="addend-switch" data-bit="3"><span class="slider"></span></label></div></td>
+                            <td><div class="bit-container"><label class="switch"><input type="checkbox" class="addend-switch" data-bit="2"><span class="slider"></span></label></div></td>
+                            <td><div class="bit-container"><label class="switch"><input type="checkbox" class="addend-switch" data-bit="1"><span class="slider"></span></label></div></td>
+                            <td><div class="bit-container"><label class="switch"><input type="checkbox" class="addend-switch" data-bit="0"><span class="slider"></span></label></div></td>
+                        </tr>
+                        
+                        <!-- 第三行：和 -->
+                        <tr>
+                            <td colspan="8" class="operand-label">和</td>
+                        </tr>
+                        <tr>
+                            <td><div class="bit-container"><div class="led sum-led" id="sum-led-7"></div></div></td>
+                            <td><div class="bit-container"><div class="led sum-led" id="sum-led-6"></div></div></td>
+                            <td><div class="bit-container"><div class="led sum-led" id="sum-led-5"></div></div></td>
+                            <td><div class="bit-container"><div class="led sum-led" id="sum-led-4"></div></div></td>
+                            <td><div class="bit-container"><div class="led sum-led" id="sum-led-3"></div></div></td>
+                            <td><div class="bit-container"><div class="led sum-led" id="sum-led-2"></div></div></td>
+                            <td><div class="bit-container"><div class="led sum-led" id="sum-led-1"></div></div></td>
+                            <td><div class="bit-container"><div class="led sum-led" id="sum-led-0"></div></div></td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <!-- 运算符号显示 - 修改为三行四列表格 -->
+                <div class="operation-display">
+                    <table class="value-table">
+                        <!-- 第一行：表头 -->
+                        <tr>
+                            <th>类型</th>
+                            <th>二进制</th>
+                            <th>十进制</th>
+                            <th>十六进制</th>
+                        </tr>
+                        <!-- 第二行：被加数 -->
+                        <tr>
+                            <td><span class="operation-label">被加数</span></td>
+                            <td><span class="binary-display" id="augend-binary">00000000</span><br><small>(二进制)</small></td>
+                            <td><span class="value" id="augend-decimal">0</span><br><small>(十进制)</small></td>
+                            <td><span class="value" id="augend-hex">00</span><br><small>(十六进制)</small></td>
+                        </tr>
+                        <!-- 第三行：加数 -->
+                        <tr>
+                            <td><span class="operation-label">加数</span></td>
+                            <td><span class="binary-display" id="addend-binary">00000000</span><br><small>(二进制)</small></td>
+                            <td><span class="value" id="addend-decimal">0</span><br><small>(十进制)</small></td>
+                            <td><span class="value" id="addend-hex">00</span><br><small>(十六进制)</small></td>
+                        </tr>
+                        <!-- 第四行：和 -->
+                        <tr>
+                            <td><span class="operation-label">和</span></td>
+                            <td><span class="binary-display" id="sum-binary">00000000</span><br><small>(二进制)</small></td>
+                            <td><span class="value" id="sum-decimal">0</span><br><small>(十进制)</small></td>
+                            <td><span class="value" id="sum-hex">00</span><br><small>(十六进制)</small></td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <!-- 清除按钮 -->
+                <div style="text-align: center; margin-top: 30px;">
+                    <button id="clear-button" style="
+                        background-color: #00ff9d;
+                        color: #1a1a1a;
+                        border: none;
+                        border-radius: 8px;
+                        padding: 15px 30px;
+                        font-size: 18px;
+                        font-weight: bold;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                        box-shadow: 0 4px 15px rgba(0, 255, 157, 0.3);
+                    ">
+                        清除输入和输出
+                    </button>
+                </div>
+            </div>
+        </div>
+    
+    <script>
+            // 获取所有开关和LED元素
+            const augendSwitches = document.querySelectorAll('.augend-switch');
+            const addendSwitches = document.querySelectorAll('.addend-switch');
+            const sumLeds = document.querySelectorAll('.sum-led');
+            
+            // 获取显示元素
+            const augendBinary = document.getElementById('augend-binary');
+            const augendDecimal = document.getElementById('augend-decimal');
+            const augendHex = document.getElementById('augend-hex');
+            
+            const addendBinary = document.getElementById('addend-binary');
+            const addendDecimal = document.getElementById('addend-decimal');
+            const addendHex = document.getElementById('addend-hex');
+            
+            const sumBinary = document.getElementById('sum-binary');
+            const sumDecimal = document.getElementById('sum-decimal');
+            const sumHex = document.getElementById('sum-hex');
+            
+            // 初始化被加数和加数
+            let augendValue = 0;
+            let addendValue = 0;
+            
+            // 更新和并显示所有值
+            function updateSum() {
+                // 计算和（字节加法，255后溢出回到0）
+                const sumValue = (augendValue + addendValue) & 0xFF;
+                
+                // 更新被加数显示
+                augendBinary.textContent = augendValue.toString(2).padStart(8, '0');
+                augendDecimal.textContent = augendValue.toString();
+                augendHex.textContent = augendValue.toString(16).toUpperCase().padStart(2, '0');
+                
+                // 更新加数显示
+                addendBinary.textContent = addendValue.toString(2).padStart(8, '0');
+                addendDecimal.textContent = addendValue.toString();
+                addendHex.textContent = addendValue.toString(16).toUpperCase().padStart(2, '0');
+                
+                // 更新和显示
+                sumBinary.textContent = sumValue.toString(2).padStart(8, '0');
+                sumDecimal.textContent = sumValue.toString();
+                sumHex.textContent = sumValue.toString(16).toUpperCase().padStart(2, '0');
+                
+                // 更新和的LED灯状态
+                for (let i = 0; i < 8; i++) {
+                    const bitValue = (sumValue >> i) & 1;
+                    const led = document.getElementById(`sum-led-${i}`);
+                    
+                    if (bitValue === 1) {
+                        led.classList.add('active');
+                        // 添加闪烁效果
+                        if (Math.random() > 0.7) {
+                            led.classList.add('pulse');
+                            setTimeout(() => led.classList.remove('pulse'), 1000);
+                        }
+                    } else {
+                        led.classList.remove('active', 'pulse');
+                    }
+                }
+            }
+            
+            // 添加被加数开关事件监听
+            augendSwitches.forEach(switchEl => {
+                switchEl.addEventListener('change', () => {
+                    const bit = parseInt(switchEl.dataset.bit);
+                    
+                    if (switchEl.checked) {
+                        // 设置对应位为1
+                        augendValue |= (1 << bit);
+                    } else {
+                        // 设置对应位为0
+                        augendValue &= ~(1 << bit);
+                    }
+                    
+                    // 更新和
+                    updateSum();
+                    
+                    // 添加开关切换的声音效果
+                    playSwitchSound(switchEl.checked);
+                });
+            });
+            
+            // 添加加数开关事件监听
+            addendSwitches.forEach(switchEl => {
+                switchEl.addEventListener('change', () => {
+                    const bit = parseInt(switchEl.dataset.bit);
+                    
+                    if (switchEl.checked) {
+                        // 设置对应位为1
+                        addendValue |= (1 << bit);
+                    } else {
+                        // 设置对应位为0
+                        addendValue &= ~(1 << bit);
+                    }
+                    
+                    // 更新和
+                    updateSum();
+                    
+                    // 添加开关切换的声音效果
+                    playSwitchSound(switchEl.checked);
+                });
+            });
+            
+            // 播放开关声音
+            function playSwitchSound(isOn) {
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.frequency.value = isOn ? 800 : 400;
+                    gainNode.gain.value = 0.1;
+                    
+                    oscillator.start();
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
+                    oscillator.stop(audioContext.currentTime + 0.1);
+                } catch (e) {
+                    // 忽略音频错误
+                }
+            }
+            
+            // 初始化显示
+            updateSum();
+            
+            // 添加清除按钮点击事件
+            document.getElementById('clear-button').addEventListener('click', () => {
+                // 清除所有开关状态
+                augendSwitches.forEach(switchEl => {
+                    switchEl.checked = false;
+                });
+                addendSwitches.forEach(switchEl => {
+                    switchEl.checked = false;
+                });
+                
+                // 重置被加数和加数的值
+                augendValue = 0;
+                addendValue = 0;
+                
+                // 更新显示
+                updateSum();
+                
+                // 播放清除按钮的声音效果
+                playClearSound();
+            });
+            
+            // 播放清除按钮声音
+            function playClearSound() {
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.frequency.value = 500;
+                    gainNode.gain.value = 0.1;
+                    
+                    oscillator.start();
+                    // 频率从500Hz降到200Hz，形成清除的声音效果
+                    oscillator.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.2);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.2);
+                    oscillator.stop(audioContext.currentTime + 0.2);
+                } catch (e) {
+                    // 忽略音频错误
+                }
+            }
+            
+            // 添加键盘交互
+            document.addEventListener('keydown', (e) => {
+                // 按下数字键0-7可以切换被加数对应位
+                const keyNum = parseInt(e.key);
+                if (!isNaN(keyNum) && keyNum >= 0 && keyNum <= 7) {
+                    // 如果按下Shift键，切换加数的位
+                    if (e.shiftKey) {
+                        const switchEl = document.querySelector(`.addend-switch[data-bit="${keyNum}"]`);
+                        if (switchEl) {
+                            switchEl.checked = !switchEl.checked;
+                            // 手动触发change事件
+                            const event = new Event('change');
+                            switchEl.dispatchEvent(event);
+                        }
+                    } else {
+                        // 否则切换被加数的位
+                        const switchEl = document.querySelector(`.augend-switch[data-bit="${keyNum}"]`);
+                        if (switchEl) {
+                            switchEl.checked = !switchEl.checked;
+                            // 手动触发change事件
+                            const event = new Event('change');
+                            switchEl.dispatchEvent(event);
+                        }
+                    }
+                }
+                // 按下空格键清空所有位
+                if (e.key === ' ') {
+                    augendSwitches.forEach(switchEl => {
+                        switchEl.checked = false;
+                    });
+                    addendSwitches.forEach(switchEl => {
+                        switchEl.checked = false;
+                    });
+                    augendValue = 0;
+                    addendValue = 0;
+                    updateSum();
+                }
+            });
+        </script>
+</body>
+</html>
